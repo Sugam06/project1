@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">FuelApplication</string>
+    <string name="title_activity_maps">Map</string>
+
+    <string-array name="count">
+
+        <item>Select Quantity</item>
+
+        <item>1</item>
+
+        <item>2</item>
+
+        <item>3</item>
+
+        <item>4</item>
+
+        <item>5</item>
+
+    </string-array>
+
+
+    -
+    <string-array name="type">
+
+        <item>Select Fuel Type</item>
+
+        <item>Diesel</item>
+
+        <item>Petrol</item>
+
+        <item>CNG</item>
+
+    </string-array>
+</resources>

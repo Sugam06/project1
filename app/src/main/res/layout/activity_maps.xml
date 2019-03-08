@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:layout_width="match_parent"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="match_parent"
+    android:background="#d75e32">
+
+    <EditText
+        android:id="@+id/TF_location"
+        android:layout_width="373dp"
+        android:layout_height="45dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="0dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:hint="Name"
+        android:textColorHint="#fcf9f9"
+        android:gravity="center"
+        android:textColor="#ffffff"
+        />
+
+
+
+
+    <fragment xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:map="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:context="com.example.priyanka.mapsdemo.MapsActivity"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:layout_below="@+id/ll" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/TF_location"
+        android:id="@+id/ll"
+        >
+
+        <Button
+            android:id="@+id/B_search"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:onClick="onClick"
+            android:text="Search"
+            android:layout_weight="1"
+            android:textColor="#d75e32"
+            android:textStyle="bold"
+            android:background="#060101"/>
+
+
+        <Button
+            android:id="@+id/B_gasStation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+
+            android:onClick="onClick"
+            android:text="Gas Station"
+            android:layout_weight="1"
+            android:textColor="#d75e32"
+            android:background="#060101"
+            android:textStyle="bold"/>
+
+        <Button
+            android:id="@+id/B_to"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:onClick="onClick"
+            android:text="To"
+            android:layout_weight="1"
+            android:textColor="#d75e32"
+            android:background="#060101"
+            android:textStyle="bold"/>
+
+    </LinearLayout>
+
+
+</RelativeLayout>
