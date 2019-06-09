@@ -2,7 +2,6 @@ package com.easytechh.fuelapplication;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
@@ -17,12 +16,9 @@ import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,6 +42,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.paypal.android.sdk.payments.PayPalConfiguration;
 import com.paypal.android.sdk.payments.PayPalPayment;
 import com.paypal.android.sdk.payments.PayPalService;
@@ -70,35 +67,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     GoogleMap mMap;
-
     private GoogleApiClient client;
     private LocationRequest locationRequest;
     private Location lastlocation;
     private Marker currentLocationmMarker;
     public static final int REQUEST_LOCATION_CODE = 99;
-    int PROXIMITY_RADIUS = 10000;
+    int PROXIMITY_RADIUS = 1000;
     double latitude,longitude;
-    PayPalConfiguration m_congiguration;
-    String m_paypalClientId;
-    Intent m_service;
-    int m_paypalRequestCode = 1;
+    double end_latitude,end_longitude;
+
     private TextView total;
+
 
     Button submit;
 
-    //Paypal code
 
-    //Paypal intent request code to track onActivityResult method
-    public static final int PAYPAL_REQUEST_CODE = 123;
-    private static PayPalConfiguration config = new PayPalConfiguration()
-            // Start with mock environment.  When ready, switch to sandbox (ENVIRONMENT_SANDBOX)
-            // or live (ENVIRONMENT_PRODUCTION)
-            .environment(PayPalConfiguration.ENVIRONMENT_SANDBOX)
-            .clientId(Config.PAYPAL_CLIENT_ID);
-
-    //The views
     private Button buttonPay;
-    private EditText editTextAmount;
+    EditText tf_location;
 
     //Payment Amount
     private String paymentAmount;
@@ -109,29 +94,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-        Intent intent = new Intent(this, PayPalService.class);
-
-        intent.putExtra(PayPalService.EXTRA_PAYPAL_CONFIGURATION, config);
-
-        startService(intent);
-        //code over
+        tf_location =  findViewById(R.id.TF_location);
 
 
-new Thread(new Runnable() {
-    @Override
-    public void run() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-        {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             checkLocationPermission();
 
         }
-    }
-});
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_LOCATION_CODE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        if (client == null) {
+                            bulidGoogleApiClient();
+                        }
+                        mMap.setMyLocationEnabled(true);
+                    }
+                } else {
+                    Toast.makeText(this, "Permission Denied", Toast.LENGTH_LONG).show();
+                }
+        }
     }
 
 
@@ -148,128 +140,6 @@ new Thread(new Runnable() {
 
 
 
-    private void getPayment() {
-        //Getting the amount from editText
-        paymentAmount = total.getText().toString();
-
-        //Creating a paypalpayment
-        PayPalPayment payment = new PayPalPayment(new BigDecimal(String.valueOf(paymentAmount)), "USD", "Simplified Coding Fee",
-                PayPalPayment.PAYMENT_INTENT_SALE);
-
-        //Creating Paypal Payment activity intent
-        Intent intent = new Intent(this, PaymentActivity.class);
-
-        //putting the paypal configuration to the intent
-        intent.putExtra(PayPalService.EXTRA_PAYPAL_CONFIGURATION, config);
-
-        //Puting paypal payment to the intent
-        intent.putExtra(PaymentActivity.EXTRA_PAYMENT, payment);
-
-        //Starting the intent activity for result
-        //the request code will be used on the method onActivityResult
-        startActivityForResult(intent, PAYPAL_REQUEST_CODE);
-    }
-
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        //If the result is from paypal
-        if (requestCode == PAYPAL_REQUEST_CODE) {
-
-            //If the result is OK i.e. user has not canceled the payment
-            if (resultCode == Activity.RESULT_OK) {
-                //Getting the payment confirmation
-                PaymentConfirmation confirm = data.getParcelableExtra(PaymentActivity.EXTRA_RESULT_CONFIRMATION);
-
-                //if confirmation is not null
-                if (confirm != null) {
-                    try {
-                        //Getting the payment details
-                        String paymentDetails = confirm.toJSONObject().toString(4);
-                        Log.i("paymentExample", paymentDetails);
-
-                        //Starting a new activity for the payment details and also putting the payment details with intent
-                        startActivity(new Intent(this, ConfirmationActivity.class)
-                                .putExtra("PaymentDetails", paymentDetails)
-                                .putExtra("PaymentAmount", paymentAmount));
-
-                    } catch (JSONException e) {
-                        Log.e("paymentExample", "an extremely unlikely failure occurred: ", e);
-                    }
-                }
-            } else if (resultCode == Activity.RESULT_CANCELED) {
-                Log.i("paymentExample", "The user canceled.");
-            } else if (resultCode == PaymentActivity.RESULT_EXTRAS_INVALID) {
-                Log.i("paymentExample", "An invalid Payment or PayPalConfiguration was submitted. Please see the docs.");
-            }
-        }
-    }
-
-
-//code over
-
-
-
-
-    public void customDetails(String s) {
-        AlertDialog.Builder alert = new AlertDialog.Builder(this);
-        View v = LayoutInflater.from(this).inflate(R.layout.alert, null);
-        TextView add = v.findViewById(R.id.address);
-        final Spinner qua0n = v.findViewById(R.id.quantity);
-        final Spinner type = v.findViewById(R.id.type);
-        final TextView unit = v.findViewById(R.id.unitprice);
-        submit=v.findViewById(R.id.submit);
-        submit.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-               getPayment();
-            }
-        });
-        total = v.findViewById(R.id.totalprice);
-
-
-
-        add.setText(s);
-
-        type.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                if (!type.getSelectedItem().toString().equalsIgnoreCase("select fuel type")) {
-                    if (type.getSelectedItem().toString().equalsIgnoreCase("petrol")) {
-//set petrol unit price
-                        unit.setText(String.valueOf(80));
-
-                        total.setText(String.valueOf(Double.parseDouble(unit.getText().toString())*Double.parseDouble(qua0n.getSelectedItem().toString())));
-                    } else if (type.getSelectedItem().toString().equalsIgnoreCase("diesel")) {
-                        //set diesel unit price
-                        unit.setText(String.valueOf(70));
-                        total.setText(String.valueOf(Double.parseDouble(unit.getText().toString())*Double.parseDouble(qua0n.getSelectedItem().toString())));
-                    } else {
-                        //set cng unit price
-                        unit.setText(String.valueOf(40));
-                        total.setText(String.valueOf(Double.parseDouble(unit.getText().toString())*Double.parseDouble(qua0n.getSelectedItem().toString())));
-                    }
-                } else {
-                    Toast.makeText(MapsActivity.this, "Select Fuel Type", Toast.LENGTH_SHORT).show();
-                    unit.setText("");
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-                Toast.makeText(MapsActivity.this, "Please fill all fields", Toast.LENGTH_SHORT).show();
-
-            }
-        });
-
-
-        alert.setView(v);
-
-        alert.show();
-    }
-
-
 
 
     protected synchronized void bulidGoogleApiClient() {
@@ -284,7 +154,14 @@ new Thread(new Runnable() {
         latitude = location.getLatitude();
         longitude = location.getLongitude();
         lastlocation = location;
+        String address=null;
+try {
+    Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+    List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+    address=addresses.get(0).getAddressLine(0);
+}catch(Exception e){
 
+}
 
         if(currentLocationmMarker != null)
         {
@@ -295,7 +172,7 @@ new Thread(new Runnable() {
         LatLng latLng = new LatLng(location.getLatitude() , location.getLongitude());
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
-        markerOptions.title("Current Location");
+        markerOptions.title(address);
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
         currentLocationmMarker = mMap.addMarker(markerOptions);
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
@@ -358,6 +235,7 @@ new Thread(new Runnable() {
                 for(int i=0;i<list.size();i++){
                     String url=list.get(i).toString();
 
+
                     //Log.d("Urls : ",url);
                     JsonObjectRequest jsonObjectRequest=new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
                         @Override
@@ -365,10 +243,23 @@ new Thread(new Runnable() {
                             //parser.getData(response.toString());
                             try {
                                 HashMap<String,String> objectPlace;
+                              //  HashMap<String,ArrayList<String>> workingHours;
+                                ArrayList<String> workingHours=new ArrayList<>();
+
+
                                 JSONObject object=response.getJSONObject("result");
+                           /* JSONObject jsonObjectRequest1=object.getJSONObject("opening_hours");
+                               JSONArray array=jsonObjectRequest1.getJSONArray("weekday_text");
+*/
+                       /*for(int i=0;i<array.length();i++){
+                                 String day=array.getString(i);
+                                object.put("day",day);
+                             }*/
 
 
                            objectPlace=parser.getPlace(object);
+                          // workingHours=parser.getPlace(array);
+
 
                          showNearbyPlaces(objectPlace);
 
@@ -399,23 +290,34 @@ new Thread(new Runnable() {
     }
 
 
+
    public void showNearbyPlaces(HashMap<String, String> nearbyPlaces)
     {
 
-            MarkerOptions markerOptions = new MarkerOptions();
-            HashMap<String, String> googlePlace = nearbyPlaces;
+            final MarkerOptions markerOptions = new MarkerOptions();
 
-            final String placeName = googlePlace.get("place_name");
-            String vicinity = googlePlace.get("vicinity");
-            String contact = googlePlace.get("formatted_phone");
-            double lat = Double.parseDouble( googlePlace.get("lat"));
-            double lng = Double.parseDouble( googlePlace.get("lng"));
 
-         //  Log.d("place details",placeName+" : "+vicinity+" : "+contact+" : "+String.valueOf(lat));
+
+            final String placeName = nearbyPlaces.get("place_name");
+            final String vicinity = nearbyPlaces.get("vicinity");
+            final String contact = nearbyPlaces.get("formatted_phone");
+           final String contact2=nearbyPlaces.get("other_number");
+                final String timeDetails=nearbyPlaces.get("Hours");
+
+
+
+        double lat = Double.parseDouble(nearbyPlaces.get("lat"));
+            double lng = Double.parseDouble( nearbyPlaces.get("lng"));
+
 
             LatLng latLng = new LatLng( lat, lng);
             markerOptions.position(latLng);
-           markerOptions.title(placeName + " : "+ vicinity+" : "+"PH."+" : "+ contact);
+
+            if(!contact.equalsIgnoreCase("Not Available")) {
+                markerOptions.title(placeName + "  " + vicinity + "  " + contact+"  "+timeDetails);
+            }else{
+                markerOptions.title(placeName + "  " + vicinity + "  " + contact2+"  "+timeDetails);
+            }
 
             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
 
@@ -426,14 +328,29 @@ new Thread(new Runnable() {
             @Override
             public boolean onMarkerClick(Marker marker) {
                 String st=marker.getTitle();
-                customDetails(st);
-                //Toast.makeText(MapsActivity.this, st, Toast.LENGTH_SHORT).show();
+
+
+                Intent intent=new Intent(MapsActivity.this,Information.class);
+                intent.putExtra("Details",st);
+
+
+                end_latitude=marker.getPosition().latitude;
+                end_longitude=marker.getPosition().longitude;
+                float results[]=new float[10];
+                Location.distanceBetween(latitude,longitude,end_latitude,end_longitude,results);
+
+                tf_location.setText("Distance : "+results[0]+" meter");
+              intent.putExtra("Distance",String.valueOf(results[0]));
+                startActivity(intent);
                 return true;
             }
         }));
 
 
     }
+
+
+
 
 
 
@@ -444,7 +361,7 @@ new Thread(new Runnable() {
         switch(v.getId())
         {
             case R.id.B_search:
-                EditText tf_location =  findViewById(R.id.TF_location);
+
                 String location = tf_location.getText().toString();
                 List<Address> addressList;
 
@@ -516,13 +433,13 @@ new Thread(new Runnable() {
         googlePlaceUrl.append("placeid="+placeid);
         googlePlaceUrl.append("&key="+"AIzaSyA0sipSO46iA57bZsoXOgizb3b651loCtA");
 
-       // Log.d("MapsActivityforPhoneNO", "url = "+googlePlaceUrl.toString());
+       Log.d("MapsActivityforPhoneNO", "url = "+googlePlaceUrl.toString());
 
         ArrayList list=new ArrayList();
         list.add(googlePlaceUrl.toString());
 
-        /*for(int i=0;i<list.size();i++){
-           // Log.d("DetailsUrl",list.get(i).toString());
+       /* for(int i=0;i<list.size();i++){
+            Log.d("DetailsUrl",list.get(i).toString());
         }*/
             gettingDetails(list);
         return googlePlaceUrl.toString();
@@ -532,7 +449,7 @@ new Thread(new Runnable() {
     public void onConnected(@Nullable Bundle bundle) {
 
         locationRequest = new LocationRequest();
-        locationRequest.setInterval(100);
+        locationRequest.setInterval(1000);
         locationRequest.setFastestInterval(1000);
         locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
@@ -544,26 +461,19 @@ new Thread(new Runnable() {
     }
 
 
-    public boolean checkLocationPermission()
-    {
-        if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)  != PackageManager.PERMISSION_GRANTED )
-        {
+    public boolean checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.ACCESS_FINE_LOCATION))
-            {
-                ActivityCompat.requestPermissions(this,new String[] {Manifest.permission.ACCESS_FINE_LOCATION },REQUEST_LOCATION_CODE);
-            }
-            else
-            {
-                ActivityCompat.requestPermissions(this,new String[] {Manifest.permission.ACCESS_FINE_LOCATION },REQUEST_LOCATION_CODE);
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_CODE);
+            } else {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_CODE);
             }
             return false;
 
-        }
-        else
+        } else
             return true;
     }
-
 
     @Override
     public void onConnectionSuspended(int i) {

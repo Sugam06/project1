@@ -2,12 +2,8 @@ package com.easytechh.fuelapplication;
 
 import android.util.Log;
 
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.gson.JsonObject;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -15,18 +11,22 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Iterator;
 
-public class DataParser {
+public class DataParser  {
 GoogleMap mMap;
 
     public HashMap<String, String> getPlace(JSONObject object)
     {
 
    HashMap<String, String> googlePlaceMap = new HashMap<>();
+
         String placeName = "--NA--";
         String address= "--NA--";
         String formatted_phone="Not Available";
+        String other_number="Not Available";
+        JSONObject jsonObject=new JSONObject();
+        String hours="Not Available";
         String latitude= "";
         String longitude="";
         String reference="";
@@ -45,8 +45,20 @@ GoogleMap mMap;
 
             if(object.has("name")){
                 placeName=object.getString("name");
+
             }
-       //   Log.d("All Details ",formatted_phone+" : "+address+" : "+placeName);
+
+            if(object.has("international_phone_number")){
+                other_number=object.getString("international_phone_number");
+            }
+          if(object.has("opening_hours")){
+        jsonObject=object.getJSONObject("opening_hours");
+              hours=jsonObject.toString();
+
+          }
+
+
+
 
 
             latitude = object.getJSONObject("geometry").getJSONObject("location").getString("lat");
@@ -57,12 +69,17 @@ GoogleMap mMap;
             googlePlaceMap.put("place_name", placeName);
             googlePlaceMap.put("vicinity", address);
             googlePlaceMap.put("formatted_phone", formatted_phone);
+            googlePlaceMap.put("other_number",other_number);
+          //  googlePlaceMap.put("weekdays",weekdays);
+          //  googlePlaceMap.put("weekdays",array.toString());
+            googlePlaceMap.put("Hours",hours);
+
+
             googlePlaceMap.put("lat", latitude);
             googlePlaceMap.put("lng", longitude);
             googlePlaceMap.put("reference", reference);
-                        //getPlaces(googlePlaceMap);
 
-            // getPlaces(googlePlaceMap);
+
         }
         catch (JSONException e) {
             e.printStackTrace();
